@@ -61,16 +61,21 @@ class featured_courses implements renderable, templatable {
         global $DB;
         // First make sure that we have id in the table and not empty strings.
         $realcourseids = [];
+        $idx = 1;
         foreach ($coursesid as $cid) {
             if ($cid && is_numeric($cid)) {
-                $realcourseids[] = $cid;
+                $realcourseids[] = "($cid, $idx)";
+                $idx++;
             }
         }
         if (empty($realcourseids)) {
             $this->courses = [];
         } else {
-            list($sql, $params) = $DB->get_in_or_equal($realcourseids, SQL_PARAMS_NAMED);
-            $this->courses = $DB->get_records_select('course', 'id ' . $sql, $params);
+            $this->courses = $DB->get_records_sql(
+                'SELECT * FROM {course} 
+                    JOIN (VALUES '. implode(',', $realcourseids) .') as orderlist(id, ordering) ON {course}.id = orderlist.id
+                    ORDER BY orderlist.ordering'
+            );
         }
     }
 
